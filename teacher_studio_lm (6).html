@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Studio LM</title>
+    <!-- Favicon SVG Logo representation -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎓</text></svg>">
+    <!-- Tailwind CSS for robust styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome icons for rich education indicators -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- PDF.js library for high-fidelity client-side PDF text extraction and viewing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- JsPDF for document downloads -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            /* Default Theme Colors (Now Dark) */
+            --color-primary: #D4ADFC;     /* Bright lilac / lavender accent */
+            --color-secondary: #240750;   /* Deep Blue/Purple */
+            --color-accent-1: #344C64;    /* Slate Blue */
+            --color-accent-2: #577B8D;    /* Teal Gray */
+            --color-bg: #14032B;          /* Dark rich cosmos background */
+            --color-card: #1D093A;
+            --color-text: #F1E9FC;
+            --color-text-muted: #A89CB9;
+            --color-border: rgba(212, 173, 252, 0.25);
+        }
+
+        .theme-light {
+            /* Light Theme Options - Harmonized with #F2EAE0 background and #9B8EC7 Indigo */
+            --color-primary: #9B8EC7;     /* Soft Indigo / Dark Purple */
+            --color-secondary: #FAF6F0;   /* Extra Soft Light Cream */
+            --color-accent-1: #B4D3D9;    /* Sky Blue */
+            --color-accent-2: #BDA6CE;    /* Pastel Purple */
+            --color-bg: #F2EAE0;          /* Main Warm Cream Background replacing blackish tones */
+            --color-card: #FFFFFF;        /* Bright Card Background */
+            --color-text: #342D42;        /* Soft Dark Slate/Purple text instead of harsh black */
+            --color-text-muted: #6C5F7A;  /* Muted Elegant Plum */
+            --color-border: rgba(155, 142, 199, 0.3);
+        }
+
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        /* Use Theme variables dynamically */
+        .theme-bg-primary { background-color: var(--color-primary); }
+        .theme-bg-secondary { background-color: var(--color-secondary); }
+        .theme-bg-accent-1 { background-color: var(--color-accent-1); }
+        .theme-bg-accent-2 { background-color: var(--color-accent-2); }
+        
+        .theme-text-primary { color: var(--color-primary); }
+        .theme-text-secondary { color: var(--color-secondary); }
+        .theme-text-accent-1 { color: var(--color-accent-1); }
+        .theme-text-accent-2 { color: var(--color-accent-2); }
+
+        .theme-text { color: var(--color-text); }
+        .theme-text-muted { color: var(--color-text-muted); }
+
+        .theme-border { border-color: var(--color-border); }
+        .theme-card { background-color: var(--color-card); border: 1px solid var(--color-border); }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-primary);
+            border-radius: 9999px;
+            opacity: 0.5;
+        }
+
+        /* Funny Pencil Loading Animation */
+        @keyframes pencil-wiggle {
+            0% { transform: rotate(0deg) translateY(0); }
+            25% { transform: rotate(-15deg) translateY(-4px); }
+            75% { transform: rotate(15deg) translateY(4px); }
+            100% { transform: rotate(0deg) translateY(0); }
+        }
+        .pencil-anim {
+            animation: pencil-wiggle 0.6s infinite ease-in-out;
+        }
+
+        @keyframes paper-float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(2deg); }
+        }
+        .paper-anim {
+            animation: paper-float 1.8s infinite ease-in-out;
+        }
+
+        /* Interactive resizable cursor helpers */
+        .splitter-active {
+            background-color: var(--color-primary) !important;
+            box-shadow: 0 0 8px var(--color-primary);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- TOP HEADER BAR -->
+    <header class="h-16 theme-bg-primary px-6 flex items-center justify-between shadow-lg z-50 text-white shrink-0 theme-border border-b">
+        <div class="flex items-center gap-3">
+            <div class="p-2.5 theme-bg-secondary rounded-xl text-stone-900 shadow-md">
+                <i class="fa-solid fa-graduation-cap text-xl theme-text-primary"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg tracking-wide flex items-center gap-2">
+                    Teacher Studio LM
+                    <span class="text-[10px] bg-white/20 font-mono py-0.5 px-2 rounded-full text-white/90">v1.3</span>
+                </h1>
+                <p class="text-[10px] text-white/70">Intelligent Resource Workspace</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4 relative">
+            <!-- API Key input bar -->
+            <div class="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-1.5 border border-white/20 w-72 transition-all focus-within:ring-2 focus-within:ring-[var(--color-accent-1)]">
+                <i class="fa-solid fa-key text-xs opacity-75 text-[var(--color-secondary)]"></i>
+                <input 
+                    type="password" 
+                    id="apiKeyInput" 
+                    placeholder="Enter Gemini API Key..." 
+                    class="bg-transparent text-xs text-white placeholder-white/50 focus:outline-none w-full"
+                    oninput="handleApiKeyChange()"
+                >
+                <!-- API Connection status light indicator -->
+                <span id="apiIndicator" class="h-3 w-3 rounded-full bg-red-500 shadow-inner flex shrink-0" title="API Disconnected"></span>
+            </div>
+
+            <!-- Settings Theme Palette Icon -->
+            <div class="relative inline-block text-left">
+                <button onclick="toggleThemeMenu(event)" class="p-2.5 hover:bg-white/10 rounded-xl transition duration-200 text-white relative flex items-center justify-center" id="paletteBtn" title="Switch Theme">
+                    <i class="fa-solid fa-palette text-lg pointer-events-none"></i>
+                </button>
+                
+                <!-- Dropdown Theme Menu -->
+                <div id="themeMenu" class="hidden absolute right-0 mt-2 w-52 bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-100 rounded-xl shadow-2xl p-2 border border-stone-200 dark:border-stone-800 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-stone-400 px-3 py-1 border-b border-stone-100 dark:border-stone-800 mb-1">App Theme Option</p>
+                    <button onclick="setAppTheme('dark', event)" class="w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-left transition-colors font-medium">
+                        <span class="flex items-center gap-2">
+                            <span class="h-4 w-4 rounded-full border border-stone-300" style="background-color: #240750;"></span> Dark Theme (Default)
+                        </span>
+                        <i id="checkIconDark" class="fa-solid fa-check text-[10px] text-[var(--color-primary)]"></i>
+                    </button>
+                    <button onclick="setAppTheme('light', event)" class="w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-left transition-colors font-medium">
+                        <span class="flex items-center gap-2">
+                            <span class="h-4 w-4 rounded-full border border-stone-300" style="background-color: #FAF8F5;"></span> Light Theme
+                        </span>
+                        <i id="checkIconLight" class="fa-solid fa-check text-[10px] text-[var(--color-primary)] hidden"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN BODY WORKSPACE -->
+    <div class="flex flex-1 overflow-hidden relative" id="workspaceContainer">
+        
+        <!-- LEFT SIDEBAR: Document Upload & List -->
+        <aside id="leftSidebar" class="w-80 theme-card theme-border border-r flex flex-col shrink-0 overflow-hidden" style="width: 320px; min-width: 200px; max-width: 500px;">
+            <div class="p-4 theme-border border-b">
+                <h2 class="font-bold text-sm flex items-center gap-2 theme-text">
+                    <i class="fa-solid fa-books text-base text-[var(--color-primary)]"></i>
+                    Study & Teaching Materials
+                </h2>
+                <p class="text-[10px] theme-text-muted mt-1">Select documents to include as reference context.</p>
+            </div>
+
+            <!-- Upload Area -->
+            <div class="p-4 theme-border border-b">
+                <label class="border-2 border-dashed theme-border hover:border-[var(--color-primary)] rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition bg-[var(--color-secondary)]/10 text-center group">
+                    <input type="file" id="documentUpload" multiple accept=".pdf,.txt,.md,.json" class="hidden" onchange="processFiles(event)">
+                    <i class="fa-solid fa-cloud-arrow-up text-3xl mb-2 text-[var(--color-accent-2)] group-hover:scale-110 transition duration-200"></i>
+                    <span class="text-xs font-semibold theme-text">Upload PDF, TXT or Markdown</span>
+                    <span class="text-[9px] theme-text-muted mt-1">Multi-file parsing supported</span>
+                </label>
+                <!-- Parsing loader -->
+                <div id="loaderArea" class="hidden mt-3 p-2 bg-[var(--color-secondary)]/30 rounded-lg text-center">
+                    <p class="text-[10px] theme-text-muted animate-pulse flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-notch animate-spin"></i> Parsing documents...
+                    </p>
+                </div>
+            </div>
+
+            <!-- List of Uploaded Documents -->
+            <div class="flex-1 overflow-y-auto p-3 space-y-2" id="documentList">
+                <div class="text-center py-12 opacity-60 theme-text-muted text-xs">
+                    <i class="fa-solid fa-folder-open text-4xl mb-3 block text-[var(--color-primary)] opacity-40"></i>
+                    No materials uploaded yet.
+                </div>
+            </div>
+
+            <!-- Select/Clear All Helper -->
+            <div class="p-3 bg-[var(--color-secondary)]/20 border-t theme-border flex items-center justify-between text-[11px]">
+                <button onclick="toggleAllFiles(true)" class="hover:underline text-[var(--color-primary)] font-semibold">Select All</button>
+                <span class="theme-text-muted" id="selectionCount">0 selected</span>
+                <button onclick="toggleAllFiles(false)" class="hover:underline text-rose-500 font-semibold">Clear All</button>
+            </div>
+        </aside>
+
+        <!-- DRAGGABLE SPLITTER BAR -->
+        <div id="leftSplitter" class="w-1.5 hover:w-2 bg-stone-200 dark:bg-stone-800 hover:bg-[var(--color-primary)] dark:hover:bg-[var(--color-primary)] cursor-col-resize transition-all shrink-0 z-30 select-none flex items-center justify-center relative" title="Drag to resize panels">
+            <div class="w-[2px] h-6 bg-stone-400 dark:bg-stone-600 rounded"></div>
+        </div>
+
+        <!-- CENTER PANELS: PDF/Text Viewer & Quick Generation Actions -->
+        <main class="flex-1 flex flex-col overflow-hidden theme-border border-r">
+            
+            <!-- Tool Settings Drawer: Resource configurations -->
+            <div class="px-4 pt-4 pb-1">
+                <div class="theme-card theme-border rounded-xl p-3 flex flex-wrap gap-4 items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-sliders theme-text-muted text-xs"></i>
+                        <span class="text-[11px] font-bold theme-text-muted">Resource Settings:</span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Grade level selection -->
+                        <div class="flex items-center gap-2">
+                            <label class="text-[10px] font-semibold theme-text-muted">Grade Level:</label>
+                            <select id="gradeLevelSelector" class="bg-[var(--color-secondary)] theme-text text-xs rounded-lg p-1.5 focus:outline-none border theme-border">
+                                <option value="Auto">Auto-Detect Grade</option>
+                                <option value="Kindergarten">Kindergarten</option>
+                                <option value="Elementary (1-5)">Elementary (Grade 1-5)</option>
+                                <option value="Middle School (6-8)">Middle School (Grade 6-8)</option>
+                                <option value="High School (9-12)">High School (Grade 9-12)</option>
+                                <option value="University">Higher Education / College</option>
+                            </select>
+                        </div>
+
+                        <!-- Resource color theme selection -->
+                        <div class="flex items-center gap-2">
+                            <label class="text-[10px] font-semibold theme-text-muted">Resource Palette:</label>
+                            <select id="resourceThemeSelector" class="bg-[var(--color-secondary)] theme-text text-xs rounded-lg p-1.5 focus:outline-none border theme-border">
+                                <option value="Emerald Oasis">Emerald Oasis (Green & Sand)</option>
+                                <option value="Oceanic Breeze">Oceanic Breeze (Navy & Teal)</option>
+                                <option value="Cherry Blossom">Cherry Blossom (Plum & Peach)</option>
+                                <option value="Charcoal Modern">Charcoal Modern (Slate & Gold)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document View Space -->
+            <div class="flex-1 flex flex-col overflow-hidden p-4 relative min-h-[40%]">
+                <div class="theme-card theme-border rounded-xl flex-1 flex flex-col overflow-hidden">
+                    <!-- Viewer Tab Header -->
+                    <div class="h-11 px-4 bg-[var(--color-secondary)]/50 border-b theme-border flex items-center justify-between">
+                        <span class="text-xs font-bold flex items-center gap-2 theme-text">
+                            <i class="fa-solid fa-file-invoice text-[var(--color-primary)]"></i>
+                            <span id="activeDocTitle">Active Document Viewer</span>
+                        </span>
+                        
+                        <!-- Page Selector for PDF -->
+                        <div id="pdfControls" class="hidden flex items-center gap-2 text-xs">
+                            <button onclick="prevPdfPage()" class="p-1 px-2 hover:bg-[var(--color-secondary)] rounded theme-text">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <span class="theme-text-muted"><span id="pdfCurrentPage">1</span> / <span id="pdfTotalPages">1</span></span>
+                            <button onclick="nextPdfPage()" class="p-1 px-2 hover:bg-[var(--color-secondary)] rounded theme-text">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Viewer Area -->
+                    <div class="flex-1 overflow-auto bg-[var(--color-secondary)]/20 p-4 flex justify-center items-start transition-colors" id="viewerContainer">
+                        <!-- Welcome / Empty view message -->
+                        <div id="viewerWelcome" class="m-auto text-center max-w-sm py-12 p-6 rounded-2xl bg-[var(--color-card)] border border-dashed theme-border shadow-sm">
+                            <div class="h-16 w-16 bg-[var(--color-primary)]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--color-primary)]/30">
+                                <i class="fa-solid fa-file-invoice text-2xl theme-text-primary"></i>
+                            </div>
+                            <h3 class="font-bold text-sm theme-text">Ready for Materials</h3>
+                            <p class="text-[11px] theme-text-muted mt-2 leading-relaxed">Upload and select a textbook, syllabus, or test paper on the left sidebar to preview content and generate dynamic teaching assets.</p>
+                        </div>
+
+                        <!-- Canvas for rendering PDF pages -->
+                        <div id="canvasContainer" class="hidden bg-white shadow-md rounded-lg overflow-hidden my-auto max-w-full">
+                            <canvas id="pdfRenderCanvas" class="max-w-full h-auto"></canvas>
+                        </div>
+
+                        <!-- Text container for TXT/Markdown files -->
+                        <div id="textViewer" class="hidden w-full max-w-3xl theme-card p-8 rounded-lg shadow-sm border theme-border text-xs leading-relaxed theme-text whitespace-pre-wrap select-text"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUICK RESOURCE GENERATION BLOCKS (Under Viewer) -->
+            <div class="p-4 pt-2 grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
+                
+                <!-- Presentation Block -->
+                <button onclick="triggerResourceGeneration('presentation')" class="theme-card theme-border p-4 rounded-xl text-center flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all hover:bg-[var(--color-secondary)]/30 relative overflow-hidden group">
+                    <div class="h-10 w-10 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-500">
+                        <i class="fa-solid fa-person-chalkboard text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold theme-text">Presentation</span>
+                    <span class="text-[9px] theme-text-muted">Slide outlines & lecturing notes</span>
+                </button>
+
+                <!-- Quiz Block -->
+                <button onclick="triggerResourceGeneration('quiz')" class="theme-card theme-border p-4 rounded-xl text-center flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all hover:bg-[var(--color-secondary)]/30 relative overflow-hidden group">
+                    <div class="h-10 w-10 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500">
+                        <i class="fa-solid fa-list-check text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold theme-text">Quiz Generator</span>
+                    <span class="text-[9px] theme-text-muted">MCQs, T/F, custom questions</span>
+                </button>
+
+                <!-- Exit Tickets Block -->
+                <button onclick="triggerResourceGeneration('exit_tickets')" class="theme-card theme-border p-4 rounded-xl text-center flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all hover:bg-[var(--color-secondary)]/30 relative overflow-hidden group">
+                    <div class="h-10 w-10 bg-rose-500/10 rounded-full flex items-center justify-center text-rose-500">
+                        <i class="fa-solid fa-ticket text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold theme-text">Exit Tickets</span>
+                    <span class="text-[9px] theme-text-muted">Class comprehension checkers</span>
+                </button>
+
+                <!-- Activities & Resources Block -->
+                <button onclick="triggerResourceGeneration('activities')" class="theme-card theme-border p-4 rounded-xl text-center flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all hover:bg-[var(--color-secondary)]/30 relative overflow-hidden group">
+                    <div class="h-10 w-10 bg-purple-500/10 rounded-full flex items-center justify-center text-purple-500">
+                        <i class="fa-solid fa-puzzle-piece text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold theme-text">Class Activities</span>
+                    <span class="text-[9px] theme-text-muted">Interactive games & items</span>
+                </button>
+
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR: Pedagogical Chatbot -->
+        <aside class="w-96 flex flex-col shrink-0 bg-[var(--color-secondary)]/10 overflow-hidden">
+            <!-- Chat Header -->
+            <div class="p-4 theme-card theme-border border-b flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="h-2 w-2 rounded-full bg-[var(--color-primary)] animate-pulse"></span>
+                    <span class="font-bold text-xs theme-text uppercase tracking-wider">Studio LM AI Assistant</span>
+                </div>
+                <button onclick="clearChat()" class="text-[10px] text-rose-500 hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i> Clear
+                </button>
+            </div>
+
+            <!-- Chat Message List -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="chatContainer">
+                <!-- Welcome system message -->
+                <div class="bg-[var(--color-card)] border theme-border rounded-xl p-3.5 text-xs shadow-sm">
+                    <p class="font-semibold theme-text flex items-center gap-1.5 mb-1 text-[var(--color-primary)]">
+                        <i class="fa-solid fa-robot"></i> Teacher Studio LM AI
+                    </p>
+                    <p class="theme-text-muted leading-relaxed">
+                        Welcome to your workspace! Ask me to prepare quizzes, analyze your teaching resources, or summarize any loaded topics. 
+                    </p>
+                    <p class="text-[10px] theme-text-muted mt-2 italic">
+                        Select multiple documents on the left and I will aggregate knowledge from all checked files.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="p-4 bg-[var(--color-card)] border-t theme-border flex flex-col gap-2">
+                <div class="flex items-center gap-2 bg-[var(--color-secondary)] rounded-xl px-3 py-2 border theme-border">
+                    <textarea 
+                        id="chatInput" 
+                        rows="1" 
+                        placeholder="Discuss teaching material..." 
+                        class="bg-transparent text-xs theme-text focus:outline-none w-full resize-none max-h-24"
+                        onkeydown="handleChatSubmit(event)"
+                    ></textarea>
+                    <button onclick="sendChatMessage()" class="text-[var(--color-primary)] hover:scale-110 transition shrink-0 p-1">
+                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    </button>
+                </div>
+                <span class="text-[9px] theme-text-muted text-center">Utilizing Gemini 2.5 Flash as the default model.</span>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- MAIN MODAL / FULL-SCREEN WORKSPACE EDITOR FOR READY RESOURCES -->
+    <div id="workspaceModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[var(--color-card)] w-full max-w-5xl h-[85vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl border-2 theme-border animate-in fade-in zoom-in-95 duration-200">
+            
+            <!-- Modal Header -->
+            <div class="theme-bg-primary text-white p-4 px-6 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div id="modalTypeIcon" class="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                        <i class="fa-solid fa-file-invoice text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 id="modalTitle" class="font-bold text-sm">Interactive Content Editor</h2>
+                        <p id="modalSubtitle" class="text-[10px] text-white/70">Review, modify, duplicate, or delete details before exporting your final resources.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Export Dropdown / Action options -->
+                    <button id="exportPdfBtn" onclick="exportResourceAsPdf()" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs py-2 px-4 rounded-xl flex items-center gap-2 transition">
+                        <i class="fa-solid fa-file-pdf"></i> Download PDF
+                    </button>
+                    <button onclick="closeWorkspaceModal()" class="text-white hover:text-white/70 p-1 text-lg">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Workspace Panel Grid -->
+            <div class="flex-1 overflow-hidden flex flex-col md:flex-row">
+                
+                <!-- Left Hand Side: Live Visual Editor -->
+                <div class="flex-1 overflow-y-auto p-6 bg-[var(--color-secondary)]/10 border-r theme-border flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b theme-border pb-2 mb-2">
+                        <h3 class="font-bold text-xs uppercase tracking-wider theme-text-muted">Structured Resource Fields</h3>
+                        <button onclick="addNewItemToActiveResource()" class="text-xs bg-[var(--color-primary)] text-white hover:brightness-110 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus text-[10px]"></i> Add Element
+                        </button>
+                    </div>
+                    
+                    <!-- Dynamic form lists render here depending on current active resource -->
+                    <div id="modalEditorFields" class="space-y-4"></div>
+                </div>
+
+                <!-- Right Hand Side: Live Classroom Preview Panel -->
+                <div class="w-full md:w-96 overflow-y-auto p-6 bg-[var(--color-secondary)]/30 flex flex-col gap-4">
+                    <div class="border-b theme-border pb-2">
+                        <h3 class="font-bold text-xs uppercase tracking-wider theme-text-muted">Classroom Live Preview</h3>
+                    </div>
+
+                    <!-- Live Render Box -->
+                    <div id="modalLivePreviewBox" class="flex-1 min-h-[300px] flex flex-col justify-start"></div>
+                </div>
+
+            </div>
+
+            <!-- Footer for final verification actions -->
+            <div class="p-4 bg-[var(--color-secondary)]/50 border-t theme-border flex items-center justify-between">
+                <span class="text-[11px] theme-text-muted italic">All modifications instantly affect the printable file.</span>
+                <div class="flex items-center gap-2">
+                    <button onclick="closeWorkspaceModal()" class="px-4 py-2 bg-[var(--color-secondary)] hover:brightness-95 theme-text text-xs font-bold rounded-xl transition">
+                        Cancel & Keep Editing
+                    </button>
+                    <button onclick="saveActiveResourceChanges()" class="px-5 py-2 theme-bg-primary text-white hover:brightness-115 text-xs font-bold rounded-xl shadow-md transition">
+                        Save and Update Assistant
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- SCRIPTS AND CLIENT WORKSPACE ENGINE -->
+    <script>
+        // Setup PDF.js workers globally
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // State variables
+        let appApiKey = "";
+        let currentTheme = "dark";
+        let uploadedFiles = []; // { id, name, type, textContent, rawFile? }
+        let selectedFileIds = new Set();
+        let activeDocId = null;
+        let pdfDocInstance = null;
+        let pdfCurrentPageNum = 1;
+        let chatHistory = [];
+
+        // Active generated resource state in modal
+        let activeResourceObj = null; // Holds the parsed JSON generated by Gemini
+        let activeResourceType = "";  // "presentation", "quiz", "exit_tickets", "activities"
+
+        // Funny teaching-related message list for the loader
+        const funnyTeacherLoaders = [
+            "🍎 Polishing the teacher's apple...",
+            "✏️ Sharpening the presentation pencils...",
+            "⏳ Formulating tests (please don't look at your neighbors)...",
+            "🎒 Packing your digital pedagogical backpack...",
+            "☕ Brewing double-shot educator coffee...",
+            "📚 Organizing virtual reference textbooks...",
+            "🎨 Splattering classroom-safe thematic colors...",
+            "👩‍🏫 Practicing the perfect chalkboard write..."
+        ];
+
+        // System prompt context helper to enforce precise JSON structures
+        const systemPromptTemplates = {
+            presentation: `Create a comprehensive high-fidelity lecture presentation based STRICTLY on the facts, concepts, and key information present inside the provided document(s) in the context. You must output a JSON object containing a main title and an array of slide objects. Each slide must include a 'slideNumber', a 'headline' summarizing a specific document section, 3 to 5 clear informative 'bulletPoints' summarizing core key ideas directly extracted from the text, and a 'teachingNote' containing detailed speaker hints. Maintain a high professional pedagogical standard. DO NOT output generic template material.`,
+            quiz: `Create a comprehensive quiz targeting comprehension based STRICTLY on facts, definitions, and concepts present inside the provided document(s) in the context. You must output a JSON object containing a quiz title and an array of questions. Each question must contain an 'id', 'type' (which must be exactly "MCQ", "TF", or "ShortAnswer"), a 'questionText' directly related to the document text, a list of 'options' (only present if type is MCQ), a 'correctAnswer' (should be letters or the phrase text), and a solid explanatory 'explanation' referencing page facts. DO NOT output generic boilerplate.`,
+            exit_tickets: `Create unique formative assessment exit tickets based STRICTLY on the concepts and arguments detailed inside the provided document(s) in the context. You must output a JSON object containing a title and an array of tickets. Each ticket must include 'id', 'style' (e.g. 3-2-1 check, emoji indicator, fill-in-the-blank, open reflection), and a specific question 'prompt' evaluating student core takeaway of the selected material.`,
+            activities: `Create interactive student classroom activities based STRICTLY on the theme, details, and context present inside the provided document(s) in the context. You must output a JSON object containing a title and an array of activities. Each activity must have 'id', 'name', 'duration', step-by-step 'instructions', 'resourcesNeeded', and a 'printableResource' containing specific sheets, matching keys, or clues utilizing the document details.`
+        };
+
+        // Initialize state on load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Load key from localStorage if saved
+            const savedKey = localStorage.getItem('teacher_studio_gemini_key');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+                appApiKey = savedKey;
+                validateApiKeyIndicator(true);
+            }
+            // Default app theme is dark
+            setAppTheme('dark');
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                const themeMenu = document.getElementById('themeMenu');
+                const paletteBtn = document.getElementById('paletteBtn');
+                if (themeMenu && !themeMenu.classList.contains('hidden') && e.target !== paletteBtn) {
+                    themeMenu.classList.add('hidden');
+                }
+            });
+
+            // Set up draggable resizable splitter
+            initializeResizeHandle();
+        });
+
+        // Draggable Resizer Logic
+        function initializeResizeHandle() {
+            const leftSidebar = document.getElementById('leftSidebar');
+            const leftSplitter = document.getElementById('leftSplitter');
+            let isResizing = false;
+
+            // Mouse Event Listeners
+            leftSplitter.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                leftSplitter.classList.add('splitter-active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                // Calculate dynamic width based on cursor X position
+                const newWidth = e.clientX;
+                if (newWidth >= 180 && newWidth <= 600) {
+                    leftSidebar.style.width = `${newWidth}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    leftSplitter.classList.remove('splitter-active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    // Redraw canvas context if a PDF is loaded and rescaled
+                    if (pdfDocInstance) {
+                        renderPdfPage(pdfCurrentPageNum);
+                    }
+                }
+            });
+
+            // Touch Event Listeners for Mobile devices
+            leftSplitter.addEventListener('touchstart', (e) => {
+                isResizing = true;
+                leftSplitter.classList.add('splitter-active');
+                document.body.style.userSelect = 'none';
+            }, { passive: true });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!isResizing) return;
+                const touch = e.touches[0];
+                const newWidth = touch.clientX;
+                if (newWidth >= 180 && newWidth <= 600) {
+                    leftSidebar.style.width = `${newWidth}px`;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchend', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    leftSplitter.classList.remove('splitter-active');
+                    document.body.style.userSelect = '';
+                    if (pdfDocInstance) {
+                        renderPdfPage(pdfCurrentPageNum);
+                    }
+                }
+            });
+        }
+
+        // Toggle app-level settings menu
+        function toggleThemeMenu(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('themeMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Apply app layout styling
+        function setAppTheme(theme, event) {
+            if (event) event.stopPropagation();
+            currentTheme = theme;
+            
+            const darkCheck = document.getElementById('checkIconDark');
+            const lightCheck = document.getElementById('checkIconLight');
+
+            if (theme === 'light') {
+                document.body.classList.add('theme-light');
+                if (darkCheck) darkCheck.classList.add('hidden');
+                if (lightCheck) lightCheck.classList.remove('hidden');
+            } else {
+                document.body.classList.remove('theme-light');
+                if (darkCheck) darkCheck.classList.remove('hidden');
+                if (lightCheck) lightCheck.classList.add('hidden');
+            }
+            
+            // Hide menu after selection
+            document.getElementById('themeMenu').classList.add('hidden');
+        }
+
+        // Handle API key change
+        function handleApiKeyChange() {
+            const val = document.getElementById('apiKeyInput').value.trim();
+            appApiKey = val;
+            localStorage.setItem('teacher_studio_gemini_key', val);
+            validateApiKeyIndicator(val.length > 5);
+        }
+
+        function validateApiKeyIndicator(isConnected) {
+            const ind = document.getElementById('apiIndicator');
+            if (isConnected) {
+                ind.className = "h-3 w-3 rounded-full bg-green-500 shadow-lg shadow-green-500/50 animate-pulse flex shrink-0";
+                ind.title = "Gemini API Ready";
+            } else {
+                ind.className = "h-3 w-3 rounded-full bg-red-500 shadow-inner flex shrink-0";
+                ind.title = "Gemini API Offline";
+            }
+        }
+
+        // Clear Chat Assistant history
+        function clearChat() {
+            chatHistory = [];
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = `
+                <div class="bg-[var(--color-card)] border theme-border rounded-xl p-3.5 text-xs shadow-sm">
+                    <p class="font-semibold theme-text flex items-center gap-1.5 mb-1 text-[var(--color-primary)]">
+                        <i class="fa-solid fa-robot"></i> Teacher Studio LM AI
+                    </p>
+                    <p class="theme-text-muted leading-relaxed">
+                        Chat history cleared. Send a question to begin a fresh analytical thread!
+                    </p>
+                </div>
+            `;
+        }
+
+        // Process File Uploads (Supports PDF, TXT, Markdown, and JSON)
+        async function processFiles(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            const loader = document.getElementById('loaderArea');
+            loader.classList.remove('hidden');
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileId = 'file_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+                
+                try {
+                    if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+                        await parsePdfFile(file, fileId);
+                    } else {
+                        await parseTextFile(file, fileId);
+                    }
+                } catch (err) {
+                    console.error("Error processing file:", file.name, err);
+                    alert(`Could not parse ${file.name}. Ensure it is a valid document.`);
+                }
+            }
+
+            loader.classList.add('hidden');
+            renderDocumentSidebar();
+            updateSelectionStats();
+        }
+
+        // Parse Plain Text files
+        function parseTextFile(file, id) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    uploadedFiles.push({
+                        id: id,
+                        name: file.name,
+                        type: "txt",
+                        textContent: content
+                    });
+                    // Auto select the first uploaded
+                    selectedFileIds.add(id);
+                    resolve();
+                };
+                reader.onerror = () => reject(reader.error);
+                reader.readAsText(file);
+            });
+        }
+
+        // Parse PDF files using PDF.js text extraction
+        async function parsePdfFile(file, id) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = "";
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(" ");
+                fullText += pageText + "\n";
+            }
+
+            // Client-side scanned-only validation
+            if (fullText.trim().length === 0) {
+                alert(`Warning: "${file.name}" appears to be a scanned PDF or contains no selectable digital text. Client-side extractors cannot read image-only documents. Consider converting to text first.`);
+            }
+
+            uploadedFiles.push({
+                id: id,
+                name: file.name,
+                type: "pdf",
+                textContent: fullText,
+                rawFile: file
+            });
+            // Auto select
+            selectedFileIds.add(id);
+        }
+
+        // Render documents inside left sidebar list
+        function renderDocumentSidebar() {
+            const container = document.getElementById('documentList');
+            if (uploadedFiles.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 opacity-60 theme-text-muted text-xs">
+                        <i class="fa-solid fa-folder-open text-4xl mb-3 block text-[var(--color-primary)] opacity-40"></i>
+                        No materials uploaded yet.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = "";
+            uploadedFiles.forEach(file => {
+                const isSelected = selectedFileIds.has(file.id);
+                const isActive = activeDocId === file.id;
+
+                const fileCard = document.createElement('div');
+                fileCard.className = `p-3 rounded-xl border transition-all duration-200 flex items-center justify-between gap-2 ${
+                    isActive ? 'theme-bg-secondary/20 border-[var(--color-primary)]' : 'theme-card hover:bg-[var(--color-secondary)]/30 theme-border'
+                }`;
+
+                const iconClass = file.type === 'pdf' ? 'fa-file-pdf text-rose-500' : 'fa-file-lines text-blue-500';
+
+                fileCard.innerHTML = `
+                    <div class="flex items-center gap-2.5 overflow-hidden flex-1">
+                        <!-- Custom styled check-box to configure context selection -->
+                        <input 
+                            type="checkbox" 
+                            ${isSelected ? 'checked' : ''} 
+                            onclick="toggleFileSelection(event, '${file.id}')"
+                            class="rounded border-stone-300 dark:border-stone-700 text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer h-4 w-4"
+                        >
+                        <div class="cursor-pointer overflow-hidden flex-1" onclick="setActiveDocument('${file.id}')">
+                            <p class="text-xs font-semibold truncate theme-text" title="${file.name}">
+                                <i class="fa-solid ${iconClass} mr-1"></i> ${file.name}
+                            </p>
+                            <span class="text-[9px] theme-text-muted font-mono">${(file.textContent.length / 1000).toFixed(1)}k chars</span>
+                        </div>
+                    </div>
+                    <button onclick="removeDocument('${file.id}')" class="theme-text-muted hover:text-rose-500 p-1.5 transition">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                `;
+                container.appendChild(fileCard);
+            });
+        }
+
+        // Handle check toggling for reference context
+        function toggleFileSelection(e, id) {
+            e.stopPropagation();
+            if (selectedFileIds.has(id)) {
+                selectedFileIds.delete(id);
+            } else {
+                selectedFileIds.add(id);
+            }
+            updateSelectionStats();
+            renderDocumentSidebar();
+        }
+
+        // Select All / Clear All files helper
+        function toggleAllFiles(shouldSelectAll) {
+            if (shouldSelectAll) {
+                uploadedFiles.forEach(file => selectedFileIds.add(file.id));
+            } else {
+                selectedFileIds.clear();
+            }
+            updateSelectionStats();
+            renderDocumentSidebar();
+        }
+
+        // Selection counts update
+        function updateSelectionStats() {
+            document.getElementById('selectionCount').innerText = `${selectedFileIds.size} selected`;
+        }
+
+        // Remove document
+        function removeDocument(id) {
+            uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+            selectedFileIds.delete(id);
+            if (activeDocId === id) {
+                activeDocId = null;
+                resetDocViewer();
+            }
+            updateSelectionStats();
+            renderDocumentSidebar();
+        }
+
+        // Set document currently showing in center previewer
+        async function setActiveDocument(id) {
+            activeDocId = id;
+            renderDocumentSidebar();
+
+            const file = uploadedFiles.find(f => f.id === id);
+            if (!file) return;
+
+            document.getElementById('activeDocTitle').innerText = file.name;
+            document.getElementById('viewerWelcome').classList.add('hidden');
+
+            if (file.type === "pdf") {
+                document.getElementById('textViewer').classList.add('hidden');
+                document.getElementById('canvasContainer').classList.remove('hidden');
+                document.getElementById('pdfControls').classList.remove('hidden');
+                
+                pdfCurrentPageNum = 1;
+                await initPdfViewer(file.rawFile);
+            } else {
+                document.getElementById('canvasContainer').classList.add('hidden');
+                document.getElementById('pdfControls').classList.add('hidden');
+                document.getElementById('textViewer').classList.remove('hidden');
+                
+                document.getElementById('textViewer').innerText = file.textContent;
+            }
+        }
+
+        // Reset document viewer area to welcome screen
+        function resetDocViewer() {
+            document.getElementById('activeDocTitle').innerText = "Active Document Viewer";
+            document.getElementById('viewerWelcome').classList.remove('hidden');
+            document.getElementById('canvasContainer').classList.add('hidden');
+            document.getElementById('pdfControls').classList.add('hidden');
+            document.getElementById('textViewer').classList.add('hidden');
+        }
+
+        // Handle page-by-page PDF rendering on Canvas
+        async function initPdfViewer(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            pdfDocInstance = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            document.getElementById('pdfTotalPages').innerText = pdfDocInstance.numPages;
+            renderPdfPage(pdfCurrentPageNum);
+        }
+
+        async function renderPdfPage(pageNum) {
+            if (!pdfDocInstance) return;
+            const page = await pdfDocInstance.getPage(pageNum);
+            
+            const canvas = document.getElementById('pdfRenderCanvas');
+            const context = canvas.getContext('2d');
+            
+            // Generate viewport scaled cleanly to fit parent resizable containers
+            const viewport = page.getViewport({ scale: 1.5 });
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            await page.render(renderContext).promise;
+            document.getElementById('pdfCurrentPage').innerText = pageNum;
+        }
+
+        function prevPdfPage() {
+            if (pdfCurrentPageNum <= 1) return;
+            pdfCurrentPageNum--;
+            renderPdfPage(pdfCurrentPageNum);
+        }
+
+        function nextPdfPage() {
+            if (!pdfDocInstance || pdfCurrentPageNum >= pdfDocInstance.numPages) return;
+            pdfCurrentPageNum++;
+            renderPdfPage(pdfCurrentPageNum);
+        }
+
+        // RETRY FETCH WITH EXPONENTIAL BACKOFF FOR GEMINI API
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            let delay = 1000;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                    
+                    if (response.status === 429 || response.status >= 500) {
+                        throw new Error(`Status ${response.status}`);
+                    }
+                    return response;
+                } catch (err) {
+                    if (i === maxRetries - 1) throw err;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        // Call Gemini 2.5 Flash API directly (client-side)
+        async function callGemini25Flash(systemPrompt, userPrompt, useJsonMode = false) {
+            if (!appApiKey) {
+                alert("Please enter a valid Gemini API Key in the top right header first!");
+                return null;
+            }
+
+            const modelName = "gemini-2.5-flash";
+            const endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${appApiKey}`;
+
+            // Combine selected files content to act as the knowledge base
+            let referenceContext = "";
+            let selectedCount = 0;
+            uploadedFiles.forEach(file => {
+                if (selectedFileIds.has(file.id)) {
+                    referenceContext += `[DOCUMENT FILE SOURCE: "${file.name}"]\n${file.textContent}\n[END OF FILE SOURCE]\n\n`;
+                    selectedCount++;
+                }
+            });
+
+            // Prevent empty or unchecked context from calling Gemini
+            if (selectedCount === 0) {
+                alert("Action cancelled: Please make sure at least one document is checked in the left sidebar list.");
+                return null;
+            }
+
+            const extractableTextLength = referenceContext.replace(/\[.*?\]/g, "").trim().length;
+            if (extractableTextLength === 0) {
+                alert("Action cancelled: The selected document contains absolutely no readable digital text. (Image-only scanned PDFs are not supported). Please upload a text, markdown, or digital PDF file.");
+                return null;
+            }
+
+            if (referenceContext) {
+                userPrompt = `Here is the reference teaching material for context:\n${referenceContext}\n\nTask details:\n${userPrompt}`;
+            }
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: userPrompt }]
+                }],
+                system_instruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            if (useJsonMode) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json"
+                };
+            }
+
+            try {
+                const response = await fetchWithRetry(endpointUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorDetail = await response.json();
+                    throw new Error(errorDetail?.error?.message || "Internal Gemini Error");
+                }
+
+                const data = await response.json();
+                const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                return rawText;
+            } catch (err) {
+                console.error("Gemini API error:", err);
+                alert(`API Error: ${err.message || 'Check network connection or API key validity.'}`);
+                return null;
+            }
+        }
+
+        // CHATBOT INTERACTION
+        function handleChatSubmit(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const promptText = input.value.trim();
+            if (!promptText) return;
+
+            input.value = "";
+
+            appendChatMsg("user", `<p class="font-bold mb-1">You</p><p class="whitespace-pre-wrap">${escapeHtml(promptText)}</p>`);
+
+            const loadingId = appendChatMsg("ai", `
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap animate-bounce text-stone-500"></i>
+                    <span class="text-stone-400 italic font-medium">Teacher Studio LM AI is reading...</span>
+                </div>
+            `);
+
+            const sysPrompt = "You are an expert curriculum designer, educational consultant, and classroom teacher assistant. Assist the teacher professionally.";
+            const aiReply = await callGemini25Flash(sysPrompt, promptText, false);
+
+            removeChatMsg(loadingId);
+
+            if (aiReply) {
+                appendChatMsg("ai", `
+                    <p class="font-bold text-[var(--color-primary)] flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-robot"></i> Teacher Studio LM AI
+                    </p>
+                    <div class="whitespace-pre-wrap leading-relaxed">${escapeHtml(aiReply)}</div>
+                `);
+            } else {
+                appendChatMsg("ai", `
+                    <p class="text-rose-500 font-bold mb-1"><i class="fa-solid fa-triangle-exclamation"></i> Error</p>
+                    <p class="text-xs text-stone-500">Could not retrieve a reply. Please verify your API Key and checked context files.</p>
+                `);
+            }
+        }
+
+        function appendChatMsg(role, htmlContent) {
+            const container = document.getElementById('chatContainer');
+            const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+
+            const bubble = document.createElement('div');
+            bubble.id = msgId;
+            if (role === 'user') {
+                bubble.className = "bg-[var(--color-secondary)] theme-text rounded-2xl rounded-tr-none p-3.5 text-xs shadow-sm self-end ml-auto max-w-[85%] border theme-border";
+            } else {
+                bubble.className = "bg-[var(--color-card)] theme-text rounded-2xl rounded-tl-none p-3.5 text-xs shadow-sm mr-auto max-w-[85%] border theme-border";
+            }
+            bubble.innerHTML = htmlContent;
+
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+            return msgId;
+        }
+
+        function removeChatMsg(id) {
+            const element = document.getElementById(id);
+            if (element) element.remove();
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // CURRICULUM RESOURCE GENERATION ENGINE (OPTIMIZED ACTIVE BLOCKS)
+        async function triggerResourceGeneration(type) {
+            if (selectedFileIds.size === 0) {
+                alert("Please upload and check at least one reference document on the left sidebar to use as the base for this resource.");
+                return;
+            }
+
+            const gradeLevel = document.getElementById('gradeLevelSelector').value;
+            const targetColorPalette = document.getElementById('resourceThemeSelector').value;
+
+            // Pre-validation to fail gracefully prior to loading state
+            let activeTextLength = 0;
+            uploadedFiles.forEach(file => {
+                if (selectedFileIds.has(file.id)) {
+                    activeTextLength += file.textContent.trim().length;
+                }
+            });
+
+            if (activeTextLength === 0) {
+                alert("Error: The selected file contains no extractable text content. If this is a scanned PDF (image only), client-side extractors cannot read it. Please upload a digital text file instead.");
+                return;
+            }
+
+            appendChatMsg("ai", `
+                <div class="border-l-4 border-indigo-500 pl-3">
+                    <p class="font-bold text-xs theme-text uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-person-running text-indigo-500 mr-1"></i> Resource Request Initiated
+                    </p>
+                    <p class="text-[11px] theme-text-muted leading-relaxed">
+                        Generating a personalized <strong class="text-indigo-600 dark:text-indigo-400 capitalize">${type.replace('_', ' ')}</strong>. 
+                        Targeting grade level <strong>${gradeLevel}</strong> with theme palette <strong>${targetColorPalette}</strong>.
+                    </p>
+                </div>
+            `);
+
+            const funnyText = funnyTeacherLoaders[Math.floor(Math.random() * funnyTeacherLoaders.length)];
+            const loaderId = appendChatMsg("ai", `
+                <div class="funny-loading p-2 text-center flex flex-col items-center justify-center gap-3">
+                    <div class="pencil-anim text-4xl mb-1">✏️</div>
+                    <p class="text-xs font-bold theme-text">${funnyText}</p>
+                    <p class="text-[10px] theme-text-muted italic">Synthesizing multiple contexts with Gemini 2.5 Flash...</p>
+                    <div class="w-full h-1 bg-stone-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-[var(--color-primary)] animate-pulse w-2/3 mx-auto"></div>
+                    </div>
+                </div>
+            `);
+
+            const sysPrompt = systemPromptTemplates[type] + "\n\nCRITICAL DIRECTIVE: You are strictly forbidden from inventing arbitrary placeholder topics. Every slide, question, ticket, or activity MUST be created exclusively from the facts, names, figures, and concepts present inside the provided document(s). For example, if the document is about biology, the presentation must not be about grammar.";
+            const userPrompt = `
+                Generate custom curriculum content matching this type: "${type}".
+                Target audience grade level: "${gradeLevel}".
+                
+                Carefully parse the uploaded reference materials context. Extract the real specific facts, equations, or concepts inside, and use ONLY those to fill out the structure.
+                Output the result as raw structured JSON conforming to the requested schema.
+            `;
+
+            const rawJsonResult = await callGemini25Flash(sysPrompt, userPrompt, true);
+            removeChatMsg(loaderId);
+
+            if (!rawJsonResult) {
+                appendChatMsg("ai", `
+                    <p class="text-rose-500 font-bold mb-1"><i class="fa-solid fa-triangle-exclamation"></i> Action Failed</p>
+                    <p class="text-[11px] theme-text-muted">Could not compile resources. Please confirm your API status.</p>
+                `);
+                return;
+            }
+
+            try {
+                const parsedData = JSON.parse(rawJsonResult);
+                activeResourceObj = parsedData;
+                activeResourceType = type;
+
+                appendChatMsg("ai", `
+                    <div class="border-2 border-[var(--color-accent-2)] rounded-xl overflow-hidden shadow-md max-w-sm">
+                        <div class="bg-[var(--color-accent-2)] text-white p-2.5 flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-circle-check text-white"></i>
+                                <span class="font-bold text-[11px] uppercase tracking-wider">Teacher Studio LM Delivery</span>
+                            </div>
+                            <span class="text-[9px] bg-white/25 px-2 py-0.5 rounded-full">Secure</span>
+                        </div>
+                        <div class="p-4 bg-[var(--color-card)] theme-text">
+                            <p class="font-bold text-xs mb-1 text-[var(--color-primary)] capitalize">
+                                ${type.replace('_', ' ')}: ${parsedData.title || 'Classroom Materials'}
+                            </p>
+                            <p class="text-[10px] theme-text-muted leading-relaxed">
+                                Ready to deploy with theme <strong>${targetColorPalette}</strong>. You can modify each component text inside the Interactive Workspace before download!
+                            </p>
+                        </div>
+                        <div class="bg-[var(--color-secondary)]/50 p-2 flex border-t theme-border">
+                            <button onclick="launchInteractiveWorkspace()" class="w-full py-2 bg-[var(--color-primary)] hover:brightness-110 text-white font-bold text-xs rounded-lg shadow transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-pencil"></i> Open in Workspace Editor
+                            </button>
+                        </div>
+                    </div>
+                `);
+
+                launchInteractiveWorkspace();
+
+            } catch (err) {
+                console.error("JSON parsing error on response:", err, rawJsonResult);
+                appendChatMsg("ai", `
+                    <p class="text-rose-500 font-bold mb-1"><i class="fa-solid fa-triangle-exclamation"></i> Structural Parse Error</p>
+                    <p class="text-xs text-stone-500">Gemini did not return clean JSON formatting. Click the button to retry.</p>
+                `);
+            }
+        }
+
+        // WORKSPACE MODAL: INTERACTIVE EDITORS & RENDERERS
+        function launchInteractiveWorkspace() {
+            if (!activeResourceObj) return;
+
+            document.getElementById('workspaceModal').classList.remove('hidden');
+            document.getElementById('modalTitle').innerText = `${activeResourceType.toUpperCase().replace('_', ' ')} EDITOR`;
+            
+            let iconMarkup = '<i class="fa-solid fa-file-invoice text-lg"></i>';
+            if (activeResourceType === 'presentation') iconMarkup = '<i class="fa-solid fa-person-chalkboard text-lg"></i>';
+            if (activeResourceType === 'quiz') iconMarkup = '<i class="fa-solid fa-list-check text-lg"></i>';
+            if (activeResourceType === 'exit_tickets') iconMarkup = '<i class="fa-solid fa-ticket text-lg"></i>';
+            if (activeResourceType === 'activities') iconMarkup = '<i class="fa-solid fa-puzzle-piece text-lg"></i>';
+            document.getElementById('modalTypeIcon').innerHTML = iconMarkup;
+
+            renderWorkspaceEditor();
+            triggerLiveClassroomPreview();
+        }
+
+        function closeWorkspaceModal() {
+            document.getElementById('workspaceModal').classList.add('hidden');
+        }
+
+        // RENDER EDITOR FORMS
+        function renderWorkspaceEditor() {
+            const container = document.getElementById('modalEditorFields');
+            container.innerHTML = "";
+
+            if (activeResourceType === 'presentation') {
+                const slides = activeResourceObj.slides || [];
+                slides.forEach((slide, idx) => {
+                    const slideDiv = document.createElement('div');
+                    slideDiv.className = "bg-[var(--color-card)] p-4 rounded-xl border theme-border shadow-sm flex flex-col gap-2";
+                    slideDiv.innerHTML = `
+                        <div class="flex items-center justify-between border-b theme-border pb-2 mb-2">
+                            <span class="text-xs font-bold text-[var(--color-primary)]">Slide #${slide.slideNumber || (idx + 1)}</span>
+                            <button onclick="removeEditorItem(${idx})" class="text-rose-500 hover:text-rose-700 text-xs">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Slide Headline</label>
+                            <input type="text" value="${escapeHtml(slide.headline || '')}" oninput="updateActiveSlideField(${idx}, 'headline', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full theme-text">
+                        </div>
+                        <div class="flex flex-col gap-1 mt-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Bullet Points (comma separated)</label>
+                            <textarea rows="2" oninput="updateActiveSlidePoints(${idx}, this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">${(slide.bulletPoints || []).join('\n')}</textarea>
+                        </div>
+                        <div class="flex flex-col gap-1 mt-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Lecturing/Teaching Notes</label>
+                            <textarea rows="2" oninput="updateActiveSlideField(${idx}, 'teachingNote', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">${escapeHtml(slide.teachingNote || '')}</textarea>
+                        </div>
+                    `;
+                    container.appendChild(slideDiv);
+                });
+            }
+
+            else if (activeResourceType === 'quiz') {
+                const questions = activeResourceObj.questions || [];
+                questions.forEach((q, idx) => {
+                    const qDiv = document.createElement('div');
+                    qDiv.className = "bg-[var(--color-card)] p-4 rounded-xl border theme-border shadow-sm flex flex-col gap-2";
+                    
+                    let optionsMarkup = "";
+                    if (q.type === 'MCQ' && q.options) {
+                        optionsMarkup = `
+                            <div class="flex flex-col gap-1 mt-2">
+                                <label class="text-[10px] theme-text-muted font-bold">Options (MCQ options list)</label>
+                                <textarea rows="2" oninput="updateActiveQuizOptions(${idx}, this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">${(q.options || []).join('\n')}</textarea>
+                            </div>
+                        `;
+                    }
+
+                    qDiv.innerHTML = `
+                        <div class="flex items-center justify-between border-b theme-border pb-2 mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-[var(--color-primary)]">Q #${idx + 1}</span>
+                                <select onchange="updateActiveQuizType(${idx}, this.value)" class="bg-[var(--color-bg)] text-[10px] rounded p-1 focus:outline-none border theme-border theme-text">
+                                    <option value="MCQ" ${q.type === 'MCQ' ? 'selected' : ''}>Multiple Choice (MCQ)</option>
+                                    <option value="TF" ${q.type === 'TF' ? 'selected' : ''}>True / False</option>
+                                    <option value="ShortAnswer" ${q.type === 'ShortAnswer' ? 'selected' : ''}>Short Answer</option>
+                                </select>
+                            </div>
+                            <button onclick="removeEditorItem(${idx})" class="text-rose-500 hover:text-rose-700 text-xs">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Question Wording</label>
+                            <input type="text" value="${escapeHtml(q.questionText || '')}" oninput="updateActiveQuizField(${idx}, 'questionText', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">
+                        </div>
+                        ${optionsMarkup}
+                        <div class="flex flex-col gap-1 mt-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Correct Answer Key</label>
+                            <input type="text" value="${escapeHtml(q.correctAnswer || '')}" oninput="updateActiveQuizField(${idx}, 'correctAnswer', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">
+                        </div>
+                        <div class="flex flex-col gap-1 mt-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Explanatory Rationale</label>
+                            <textarea rows="2" oninput="updateActiveQuizField(${idx}, 'explanation', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">${escapeHtml(q.explanation || '')}</textarea>
+                        </div>
+                    `;
+                    container.appendChild(qDiv);
+                });
+            }
+
+            else if (activeResourceType === 'exit_tickets') {
+                const tickets = activeResourceObj.tickets || [];
+                tickets.forEach((t, idx) => {
+                    const ticketDiv = document.createElement('div');
+                    ticketDiv.className = "bg-[var(--color-card)] p-4 rounded-xl border theme-border shadow-sm flex flex-col gap-2";
+                    ticketDiv.innerHTML = `
+                        <div class="flex items-center justify-between border-b theme-border pb-2 mb-2">
+                            <span class="text-xs font-bold text-[var(--color-primary)]">Ticket #${idx + 1}</span>
+                            <button onclick="removeEditorItem(${idx})" class="text-rose-500 hover:text-rose-700 text-xs">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Style Format</label>
+                            <input type="text" value="${escapeHtml(t.style || '')}" oninput="updateActiveTicketField(${idx}, 'style', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">
+                        </div>
+                        <div class="flex flex-col gap-1 mt-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Prompt Question</label>
+                            <textarea rows="2" oninput="updateActiveTicketField(${idx}, 'prompt', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">${escapeHtml(t.prompt || '')}</textarea>
+                        </div>
+                    `;
+                    container.appendChild(ticketDiv);
+                });
+            }
+
+            else if (activeResourceType === 'activities') {
+                const activities = activeResourceObj.activities || [];
+                activities.forEach((act, idx) => {
+                    const actDiv = document.createElement('div');
+                    actDiv.className = "bg-[var(--color-card)] p-4 rounded-xl border theme-border shadow-sm flex flex-col gap-2";
+                    actDiv.innerHTML = `
+                        <div class="flex items-center justify-between border-b theme-border pb-2 mb-2">
+                            <span class="text-xs font-bold text-[var(--color-primary)]">Activity #${idx + 1}</span>
+                            <button onclick="removeEditorItem(${idx})" class="text-rose-500 hover:text-rose-700 text-xs">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Activity Name</label>
+                            <input type="text" value="${escapeHtml(act.name || '')}" oninput="updateActiveActivityField(${idx}, 'name', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">
+                        </div>
+                        <div class="flex flex-col gap-1 mt-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Suggested Duration</label>
+                            <input type="text" value="${escapeHtml(act.duration || '')}" oninput="updateActiveActivityField(${idx}, 'duration', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">
+                        </div>
+                        <div class="flex flex-col gap-1 mt-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Teacher Instructions</label>
+                            <textarea rows="3" oninput="updateActiveActivityField(${idx}, 'instructions', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full theme-text">${escapeHtml(act.instructions || '')}</textarea>
+                        </div>
+                        <div class="flex flex-col gap-1 mt-1">
+                            <label class="text-[10px] theme-text-muted font-bold">Printable Worksheet/Resources</label>
+                            <textarea rows="4" oninput="updateActiveActivityField(${idx}, 'printableResource', this.value)" class="bg-[var(--color-bg)] border theme-border rounded px-2.5 py-1.5 text-xs focus:outline-none w-full font-mono text-[11px] theme-text">${escapeHtml(act.printableResource || '')}</textarea>
+                        </div>
+                    `;
+                    container.appendChild(actDiv);
+                });
+            }
+        }
+
+        // DYNAMIC STATE UPDATERS (INPUT BINDINGS)
+        function updateActiveSlideField(idx, field, value) {
+            activeResourceObj.slides[idx][field] = value;
+            triggerLiveClassroomPreview();
+        }
+        function updateActiveSlidePoints(idx, value) {
+            activeResourceObj.slides[idx].bulletPoints = value.split('\n').filter(p => p.trim().length > 0);
+            triggerLiveClassroomPreview();
+        }
+
+        function updateActiveQuizField(idx, field, value) {
+            activeResourceObj.questions[idx][field] = value;
+            triggerLiveClassroomPreview();
+        }
+        function updateActiveQuizOptions(idx, value) {
+            activeResourceObj.questions[idx].options = value.split('\n').filter(p => p.trim().length > 0);
+            triggerLiveClassroomPreview();
+        }
+        function updateActiveQuizType(idx, value) {
+            activeResourceObj.questions[idx].type = value;
+            if (value === 'MCQ' && !activeResourceObj.questions[idx].options) {
+                activeResourceObj.questions[idx].options = ["Option A", "Option B", "Option C", "Option D"];
+            }
+            renderWorkspaceEditor();
+            triggerLiveClassroomPreview();
+        }
+
+        function updateActiveTicketField(idx, field, value) {
+            activeResourceObj.tickets[idx][field] = value;
+            triggerLiveClassroomPreview();
+        }
+
+        function updateActiveActivityField(idx, field, value) {
+            activeResourceObj.activities[idx][field] = value;
+            triggerLiveClassroomPreview();
+        }
+
+        // Add New Item to active working file
+        function addNewItemToActiveResource() {
+            if (!activeResourceObj) return;
+
+            if (activeResourceType === 'presentation') {
+                if (!activeResourceObj.slides) activeResourceObj.slides = [];
+                activeResourceObj.slides.push({
+                    slideNumber: activeResourceObj.slides.length + 1,
+                    headline: "New Dynamic Slide Topic",
+                    bulletPoints: ["Key concept bullet point 1", "Detailed learning bullet point 2"],
+                    teachingNote: "Lecturing prompt reminder for standard classrooms."
+                });
+            }
+            else if (activeResourceType === 'quiz') {
+                if (!activeResourceObj.questions) activeResourceObj.questions = [];
+                activeResourceObj.questions.push({
+                    id: activeResourceObj.questions.length + 1,
+                    type: "MCQ",
+                    questionText: "Which is the correct statement regarding this concept?",
+                    options: ["Hypothesis is correct", "Concept is variable", "Data is constant", "All are correct"],
+                    correctAnswer: "A",
+                    explanation: "Detailed analytical explanation goes here."
+                });
+            }
+            else if (activeResourceType === 'exit_tickets') {
+                if (!activeResourceObj.tickets) activeResourceObj.tickets = [];
+                activeResourceObj.tickets.push({
+                    id: activeResourceObj.tickets.length + 1,
+                    style: "Reflection Prompt",
+                    prompt: "What is the single most important concept from today's study?"
+                });
+            }
+            else if (activeResourceType === 'activities') {
+                if (!activeResourceObj.activities) activeResourceObj.activities = [];
+                activeResourceObj.activities.push({
+                    id: activeResourceObj.activities.length + 1,
+                    name: "Role Play Challenge",
+                    duration: "15 minutes",
+                    instructions: "Split students into groups and prompt them to apply the theories.",
+                    printableResource: "Resource printable details..."
+                });
+            }
+
+            renderWorkspaceEditor();
+            triggerLiveClassroomPreview();
+        }
+
+        function removeEditorItem(idx) {
+            if (activeResourceType === 'presentation') activeResourceObj.slides.splice(idx, 1);
+            if (activeResourceType === 'quiz') activeResourceObj.questions.splice(idx, 1);
+            if (activeResourceType === 'exit_tickets') activeResourceObj.tickets.splice(idx, 1);
+            if (activeResourceType === 'activities') activeResourceObj.activities.splice(idx, 1);
+
+            renderWorkspaceEditor();
+            triggerLiveClassroomPreview();
+        }
+
+        // LIVE PREVIEW GENERATION
+        function triggerLiveClassroomPreview() {
+            const previewBox = document.getElementById('modalLivePreviewBox');
+            previewBox.innerHTML = "";
+
+            const chosenThemeName = document.getElementById('resourceThemeSelector').value;
+            const themeColors = getColorsForResourceTheme(chosenThemeName);
+
+            const resTitle = document.createElement('h4');
+            resTitle.className = "text-sm font-bold border-b pb-2 mb-3 truncate";
+            resTitle.style.color = themeColors.primary;
+            resTitle.innerText = activeResourceObj.title || "Thematic Class Material";
+            previewBox.appendChild(resTitle);
+
+            if (activeResourceType === 'presentation') {
+                const slides = activeResourceObj.slides || [];
+                if (slides.length === 0) {
+                    previewBox.innerHTML += `<p class="text-xs theme-text-muted italic">No slides created yet.</p>`;
+                    return;
+                }
+
+                slides.forEach((slide, sIdx) => {
+                    const slidePage = document.createElement('div');
+                    slidePage.className = "rounded-lg p-5 mb-4 shadow border flex flex-col justify-between min-h-[220px]";
+                    slidePage.style.backgroundColor = themeColors.secondary;
+                    slidePage.style.borderColor = themeColors.primary;
+
+                    let bulletsHtml = "";
+                    (slide.bulletPoints || []).forEach(pt => {
+                        bulletsHtml += `<li class="text-[10px] list-disc ml-3 leading-normal" style="color: ${themeColors.text}">${escapeHtml(pt)}</li>`;
+                    });
+
+                    slidePage.innerHTML = `
+                        <div class="overflow-x-hidden">
+                            <span class="text-[9px] font-bold uppercase tracking-widest block mb-1" style="color: ${themeColors.primary}">Slide ${slide.slideNumber || (sIdx + 1)}</span>
+                            <h5 class="font-extrabold text-xs mb-3" style="color: ${themeColors.primary}">${escapeHtml(slide.headline || 'Lecture Topic')}</h5>
+                            <ul class="space-y-1.5">${bulletsHtml}</ul>
+                        </div>
+                        <div class="mt-4 pt-2 border-t border-dashed border-stone-300 text-[8px] italic text-stone-500 overflow-x-hidden">
+                            <strong>Speaker Note:</strong> ${escapeHtml(slide.teachingNote || 'N/A')}
+                        </div>
+                    `;
+                    previewBox.appendChild(slidePage);
+                });
+            }
+
+            else if (activeResourceType === 'quiz') {
+                const questions = activeResourceObj.questions || [];
+                if (questions.length === 0) {
+                    previewBox.innerHTML += `<p class="text-xs theme-text-muted italic">No quiz questions generated.</p>`;
+                    return;
+                }
+
+                questions.forEach((q, idx) => {
+                    const qItem = document.createElement('div');
+                    qItem.className = "bg-white p-4 rounded-xl border border-stone-200 mb-3 shadow-sm text-stone-800";
+                    
+                    let choicesHtml = "";
+                    if (q.type === 'MCQ' && q.options) {
+                        q.options.forEach((opt, optIdx) => {
+                            choicesHtml += `
+                                <div class="flex items-center gap-2 mt-1.5 p-1 rounded hover:bg-stone-50 text-[10px]">
+                                    <span class="h-4 w-4 rounded-full border border-stone-300 bg-stone-100 flex items-center justify-center font-bold text-[8px] text-stone-600">${String.fromCharCode(65 + optIdx)}</span>
+                                    <span class="text-stone-700">${escapeHtml(opt)}</span>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    qItem.innerHTML = `
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                            <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded" style="background-color: ${themeColors.secondary}; color: ${themeColors.primary}">${q.type}</span>
+                            <span class="text-[8px] text-stone-400">Question ${idx + 1}</span>
+                        </div>
+                        <p class="font-bold text-xs text-stone-800 my-1">${escapeHtml(q.questionText || '')}</p>
+                        <div class="space-y-1">${choicesHtml}</div>
+                        
+                        <div class="mt-3 p-2 bg-stone-50 rounded border border-stone-100 text-[9px] text-stone-600">
+                            <span class="font-bold text-emerald-600"><i class="fa-solid fa-key"></i> Key: ${escapeHtml(q.correctAnswer || 'Not provided')}</span>
+                            <p class="mt-1 text-stone-500 italic"><strong>Rational:</strong> ${escapeHtml(q.explanation || '')}</p>
+                        </div>
+                    `;
+                    previewBox.appendChild(qItem);
+                });
+            }
+
+            else if (activeResourceType === 'exit_tickets') {
+                const tickets = activeResourceObj.tickets || [];
+                tickets.forEach((t, idx) => {
+                    const tDiv = document.createElement('div');
+                    tDiv.className = "bg-white p-4 rounded-xl border-2 border-dashed mb-3 shadow-sm text-stone-800";
+                    tDiv.style.borderColor = themeColors.primary;
+                    tDiv.innerHTML = `
+                        <div class="flex items-center justify-between border-b pb-1.5 mb-2 border-stone-100">
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-stone-400">${escapeHtml(t.style || 'Check Out')}</span>
+                            <span class="text-[8px] font-mono text-stone-400">Exit Ticket #${idx + 1}</span>
+                        </div>
+                        <p class="font-extrabold text-xs mb-3 text-stone-800">${escapeHtml(t.prompt || 'Class Takeaways')}</p>
+                        <div class="border border-stone-200 bg-stone-50/50 rounded-lg h-14 w-full flex items-center justify-center">
+                            <span class="text-[9px] text-stone-400 italic font-mono">[Student response space]</span>
+                        </div>
+                    `;
+                    previewBox.appendChild(tDiv);
+                });
+            }
+
+            else if (activeResourceType === 'activities') {
+                const activities = activeResourceObj.activities || [];
+                activities.forEach((act, idx) => {
+                    const aDiv = document.createElement('div');
+                    aDiv.className = "bg-white p-4 rounded-xl border border-stone-200 mb-3 shadow-sm text-stone-800";
+                    aDiv.innerHTML = `
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[9px] font-extrabold uppercase tracking-widest text-indigo-500"><i class="fa-solid fa-puzzle-piece"></i> Activity ${idx + 1}</span>
+                            <span class="text-[9px] bg-stone-100 text-stone-500 font-bold px-2 py-0.5 rounded-full">${escapeHtml(act.duration || '')}</span>
+                        </div>
+                        <h5 class="font-extrabold text-xs text-stone-800 mb-1" style="color: ${themeColors.primary}">${escapeHtml(act.name || '')}</h5>
+                        <p class="text-[10px] text-stone-500 leading-normal mb-2 whitespace-pre-line"><strong>Steps:</strong> ${escapeHtml(act.instructions || '')}</p>
+                        <div class="bg-indigo-50/40 p-2.5 rounded border border-indigo-100/50 text-[9px] text-stone-600">
+                            <span class="font-bold text-indigo-700">Printable Materials:</span>
+                            <p class="font-mono text-stone-500 mt-1 whitespace-pre-wrap">${escapeHtml(act.printableResource || '')}</p>
+                        </div>
+                    `;
+                    previewBox.appendChild(aDiv);
+                });
+            }
+        }
+
+        // SAVE ACTIVE RESOURCE BACK TO ASSISTANT MEMORY
+        function saveActiveResourceChanges() {
+            appendChatMsg("ai", `
+                <div class="border-l-4 border-emerald-500 pl-3">
+                    <p class="font-bold text-xs theme-text uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i> Changes Saved
+                    </p>
+                    <p class="text-[11px] theme-text-muted leading-relaxed">
+                        The current resource schema was successfully updated inside Teacher Studio LM memory. Ready for printable exports!
+                    </p>
+                </div>
+            `);
+            closeWorkspaceModal();
+        }
+
+        // RESOURCE THEME PALETTE RESOLVER
+        function getColorsForResourceTheme(themeName) {
+            const palettes = {
+                'Emerald Oasis': { primary: '#2E7D32', secondary: '#E8F5E9', text: '#1B5E20' },
+                'Oceanic Breeze': { primary: '#0D47A1', secondary: '#E3F2FD', text: '#0D47A1' },
+                'Cherry Blossom': { primary: '#880E4F', secondary: '#FCE4EC', text: '#880E4F' },
+                'Charcoal Modern': { primary: '#212121', secondary: '#F5F5F5', text: '#212121' }
+            };
+            return palettes[themeName] || palettes['Emerald Oasis'];
+        }
+
+        // PDF EXPORT UTILITY using jsPDF
+        function exportResourceAsPdf() {
+            if (!activeResourceObj) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const themeColors = getColorsForResourceTheme(document.getElementById('resourceThemeSelector').value);
+
+            // Document Header Setup
+            doc.setFillColor(themeColors.primary);
+            doc.rect(0, 0, 210, 40, 'F');
+
+            doc.setTextColor(255, 255, 255);
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(18);
+            doc.text("TEACHER STUDIO LM CLASSROOM KIT", 15, 18);
+            
+            doc.setFont("Helvetica", "normal");
+            doc.setFontSize(11);
+            doc.text(`${activeResourceObj.title || 'Dynamic Classroom Materials'} • Grade: ${document.getElementById('gradeLevelSelector').value}`, 15, 28);
+
+            let currentY = 55;
+
+            if (activeResourceType === 'presentation') {
+                const slides = activeResourceObj.slides || [];
+                slides.forEach((slide, sIdx) => {
+                    if (currentY > 240) {
+                        doc.addPage();
+                        currentY = 20;
+                    }
+
+                    doc.setFillColor(248, 249, 250);
+                    doc.rect(10, currentY, 190, 60, 'F');
+                    
+                    doc.setDrawColor(themeColors.primary);
+                    doc.setLineWidth(0.5);
+                    doc.rect(10, currentY, 190, 60, 'D');
+
+                    doc.setTextColor(themeColors.primary);
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(11);
+                    doc.text(`SLIDE ${slide.slideNumber || (sIdx + 1)}: ${slide.headline || ''}`, 15, currentY + 10);
+
+                    doc.setTextColor(50, 50, 50);
+                    doc.setFont("Helvetica", "normal");
+                    doc.setFontSize(9);
+                    
+                    let bulletY = currentY + 20;
+                    (slide.bulletPoints || []).forEach(pt => {
+                        doc.text(`- ${pt}`, 18, bulletY);
+                        bulletY += 6;
+                    });
+
+                    doc.setFont("Helvetica", "italic");
+                    doc.text(`Speaking/Lecturing hint: ${slide.teachingNote || 'N/A'}`, 15, currentY + 54);
+
+                    currentY += 70;
+                });
+            }
+
+            else if (activeResourceType === 'quiz') {
+                const questions = activeResourceObj.questions || [];
+                questions.forEach((q, idx) => {
+                    if (currentY > 230) {
+                        doc.addPage();
+                        currentY = 20;
+                    }
+
+                    doc.setTextColor(themeColors.primary);
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(11);
+                    doc.text(`Question ${idx + 1} (${q.type})`, 15, currentY);
+                    
+                    doc.setTextColor(30, 30, 30);
+                    doc.setFont("Helvetica", "normal");
+                    doc.setFontSize(10);
+                    
+                    const textLines = doc.splitTextToSize(q.questionText || '', 175);
+                    doc.text(textLines, 15, currentY + 6);
+                    currentY += (textLines.length * 5) + 8;
+
+                    if (q.type === 'MCQ' && q.options) {
+                        q.options.forEach((opt, optIdx) => {
+                            doc.text(`${String.fromCharCode(65 + optIdx)}) ${opt}`, 20, currentY);
+                            currentY += 6;
+                        });
+                    }
+
+                    doc.setFont("Helvetica", "bold");
+                    doc.setTextColor(34, 197, 94);
+                    doc.text(`Answer: ${q.correctAnswer}`, 15, currentY);
+                    
+                    doc.setFont("Helvetica", "italic");
+                    doc.setTextColor(100, 100, 100);
+                    const explLines = doc.splitTextToSize(`Explanation: ${q.explanation || ''}`, 175);
+                    doc.text(explLines, 15, currentY + 5);
+
+                    currentY += (explLines.length * 5) + 15;
+                });
+            }
+
+            else if (activeResourceType === 'exit_tickets') {
+                const tickets = activeResourceObj.tickets || [];
+                tickets.forEach((t, idx) => {
+                    if (currentY > 230) {
+                        doc.addPage();
+                        currentY = 20;
+                    }
+
+                    doc.setFillColor(245, 245, 245);
+                    doc.rect(15, currentY, 180, 50, 'F');
+                    doc.setDrawColor(themeColors.primary);
+                    doc.setLineWidth(0.8);
+                    doc.rect(15, currentY, 180, 50, 'D');
+
+                    doc.setTextColor(themeColors.primary);
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(10);
+                    doc.text(`EXIT TICKET COMPREHENSION CHIP`, 20, currentY + 10);
+                    
+                    doc.setTextColor(150, 150, 150);
+                    doc.setFontSize(8);
+                    doc.text(`Ticket Style: ${t.style || 'Check'}`, 140, currentY + 10);
+
+                    doc.setTextColor(30, 30, 30);
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(9);
+                    const promptLines = doc.splitTextToSize(t.prompt || 'Your response...', 170);
+                    doc.text(promptLines, 20, currentY + 20);
+
+                    currentY += 60;
+                });
+            }
+
+            else if (activeResourceType === 'activities') {
+                const activities = activeResourceObj.activities || [];
+                activities.forEach((act, idx) => {
+                    if (currentY > 210) {
+                        doc.addPage();
+                        currentY = 20;
+                    }
+
+                    doc.setTextColor(themeColors.primary);
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(12);
+                    doc.text(`Activity #${idx + 1}: ${act.name || ''}`, 15, currentY);
+
+                    doc.setTextColor(100, 100, 100);
+                    doc.setFontSize(9);
+                    doc.text(`Suggested Class Duration: ${act.duration || 'N/A'}`, 15, currentY + 5);
+
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont("Helvetica", "normal");
+                    doc.setFontSize(9.5);
+                    const instLines = doc.splitTextToSize(`Instructions:\n${act.instructions || ''}`, 175);
+                    doc.text(instLines, 15, currentY + 12);
+                    
+                    currentY += (instLines.length * 5) + 15;
+
+                    doc.setFillColor(250, 248, 255);
+                    doc.rect(15, currentY, 180, 30, 'F');
+                    doc.setTextColor(50, 50, 50);
+                    doc.setFontSize(8.5);
+                    doc.text(`Worksheet Material / Clues / Match Sheet:\n${act.printableResource || ''}`, 18, currentY + 6);
+
+                    currentY += 40;
+                });
+            }
+
+            doc.save(`Teacher_Studio_LM_Kit_${activeResourceType}.pdf`);
+        }
+    </script>
+</body>
+</html>
